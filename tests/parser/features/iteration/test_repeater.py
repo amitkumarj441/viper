@@ -1,12 +1,8 @@
-import pytest
-from tests.setup_transaction_tests import chain as s, tester as t, ethereum_utils as u, check_gas, \
-    get_contract_with_gas_estimation, get_contract
-
-
-def test_basic_repeater():
+def test_basic_repeater(get_contract_with_gas_estimation):
     basic_repeater = """
+@public
 def repeat(z: num) -> num:
-    x = 0
+    x: num = 0
     for i in range(6):
         x = x + z
     return(x)
@@ -16,16 +12,16 @@ def repeat(z: num) -> num:
     print('Passed basic repeater test')
 
 
-def test_digit_reverser():
+def test_digit_reverser(get_contract_with_gas_estimation):
     digit_reverser = """
-
+@public
 def reverse_digits(x: num) -> num:
     dig: num[6]
-    z = x
+    z: num = x
     for i in range(6):
         dig[i] = z % 10
         z = z / 10
-    o = 0
+    o: num = 0
     for i in range(6):
         o = o * 10 + dig[i]
     return o
@@ -37,10 +33,11 @@ def reverse_digits(x: num) -> num:
     print('Passed digit reverser test')
 
 
-def test_more_complex_repeater():
+def test_more_complex_repeater(get_contract_with_gas_estimation):
     more_complex_repeater = """
+@public
 def repeat() -> num:
-    out = 0
+    out: num = 0
     for i in range(6):
         out = out * 10
         for j in range(4):
@@ -52,10 +49,11 @@ def repeat() -> num:
     print('Passed complex repeater test')
 
 
-def test_offset_repeater():
+def test_offset_repeater(get_contract_with_gas_estimation):
     offset_repeater = """
+@public
 def sum() -> num:
-    out = 0
+    out: num = 0
     for i in range(80, 121):
         out = out + i
     return(out)
@@ -67,10 +65,11 @@ def sum() -> num:
     print('Passed repeater with offset test')
 
 
-def test_offset_repeater_2():
+def test_offset_repeater_2(get_contract_with_gas_estimation):
     offset_repeater_2 = """
+@public
 def sum(frm: num, to: num) -> num:
-    out = 0
+    out: num = 0
     for i in range(frm, frm + 101):
         if i == to:
             break

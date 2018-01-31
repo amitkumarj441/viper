@@ -7,6 +7,7 @@ from viper.exceptions import NonPayableViolationException
 
 fail_list = [
     """
+@public
 def foo():
     x = msg.value
 """
@@ -22,14 +23,17 @@ def test_variable_decleration_exception(bad_code):
 valid_list = [
     """
 x: num
+@public
 @payable
 def foo() -> num:
     self.x = 5
+    return self.x
     """,
     """
+@public
 @payable
 def foo():
-    x = msg.value
+    x: wei_value = msg.value
     """
 ]
 

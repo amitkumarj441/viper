@@ -8,16 +8,18 @@ def memsize_to_gas(memsize):
 
 
 def compile(code, *args, **kwargs):
-    lll = optimizer.optimize(parser.parse_tree_to_lll(parser.parse(code), code))
+    lll = optimizer.optimize(parser.parse_tree_to_lll(parser.parse(code), code, runtime_only=kwargs.get('bytecode_runtime', False)))
     return compile_lll.assembly_to_evm(compile_lll.compile_to_assembly(lll))
 
 
 def gas_estimate(origcode, *args, **kwargs):
     o = {}
     code = optimizer.optimize(parser.parse_to_lll(origcode))
+
     # Extract the stuff inside the LLL bracket
     if code.value == 'seq':
-        code = code.args[-1].args[1].args[0]
+        if code.args[-1].value == 'return':
+            code = code.args[-1].args[1].args[0]
     else:
         code = code.args[1].args[0]
     assert code.value == 'seq'

@@ -1,25 +1,14 @@
 from viper.parser.parser_utils import LLLnode
-from .utils import (
-    ADDRSIZE_POS,
-    DECIMAL_DIVISOR,
-    MAXDECIMAL_POS,
-    MAXNUM_POS,
-    MINDECIMAL_POS,
-    MINNUM_POS,
-)
+from viper.utils import LOADED_LIMIT_MAP
 
 
 def get_int_at(args, pos, signed=False):
-    if isinstance(args[pos].value, int):
-        o = args[pos].value
-    elif args[pos].value == "mload" and args[pos].args[0].value in (ADDRSIZE_POS, MAXNUM_POS, MINNUM_POS, MAXDECIMAL_POS, MINDECIMAL_POS):
-        o = {
-            ADDRSIZE_POS: 2**160,
-            MAXNUM_POS: 2**128 - 1,
-            MINNUM_POS: -2**128 + 1,
-            MAXDECIMAL_POS: (2**128 - 1) * DECIMAL_DIVISOR,
-            MINDECIMAL_POS: (-2**128 + 1) * DECIMAL_DIVISOR,
-        }[args[pos].args[0].value]
+    value = args[pos].value
+
+    if isinstance(value, int):
+        o = value
+    elif value == "mload" and args[pos].args[0].value in LOADED_LIMIT_MAP.keys():
+        o = LOADED_LIMIT_MAP[args[pos].args[0].value]
     else:
         return None
     if signed:
@@ -72,7 +61,7 @@ def optimize(node):
             annotation = (argz[0].annotation or str(left)) + symb + (argz[1].annotation or str(right))
         else:
             annotation = ''
-        return LLLnode(new_value, [], node.typ, None, node.pos, annotation)
+        return LLLnode(new_value, [], node.typ, None, node.pos, annotation, add_gas_estimate=node.add_gas_estimate)
     elif node.value == "add" and int_at(argz, 0) and argz[1].value == "add" and int_at(argz[1].args, 0):
         calcer, symb = arith[node.value]
         if argz[0].annotation and argz[1].args[0].annotation:
@@ -82,11 +71,11 @@ def optimize(node):
         else:
             annotation = ''
         return LLLnode("add", [LLLnode(argz[0].value + argz[1].args[0].value, annotation=annotation), argz[1].args[1]],
-                       node.typ, None, node.annotation)
+                       node.typ, None, node.annotation, add_gas_estimate=node.add_gas_estimate)
     elif node.value == "add" and get_int_at(argz, 0) == 0:
-        return LLLnode(argz[1].value, argz[1].args, node.typ, node.location, node.pos, argz[1].annotation)
+        return LLLnode(argz[1].value, argz[1].args, node.typ, node.location, node.pos, argz[1].annotation, add_gas_estimate=node.add_gas_estimate)
     elif node.value == "add" and get_int_at(argz, 1) == 0:
-        return LLLnode(argz[0].value, argz[0].args, node.typ, node.location, node.pos, argz[0].annotation)
+        return LLLnode(argz[0].value, argz[0].args, node.typ, node.location, node.pos, argz[0].annotation, add_gas_estimate=node.add_gas_estimate)
     elif node.value == "clamp" and int_at(argz, 0) and int_at(argz, 1) and int_at(argz, 2):
         if get_int_at(argz, 0, True) > get_int_at(argz, 1, True):
             raise Exception("Clamp always fails")
@@ -98,10 +87,10 @@ def optimize(node):
         if get_int_at(argz, 0, True) > get_int_at(argz, 1, True):
             raise Exception("Clamp always fails")
         else:
-            return LLLnode("clample", [argz[1], argz[2]], node.typ, node.location, node.pos, node.annotation)
+            return LLLnode("clample", [argz[1], argz[2]], node.typ, node.location, node.pos, node.annotation, add_gas_estimate=node.add_gas_estimate)
     elif node.value == "clamp_nonzero" and int_at(argz, 0):
         if get_int_at(argz, 0) != 0:
-            return LLLnode(argz[0].value, [], node.typ, node.location, node.pos, node.annotation)
+            return LLLnode(argz[0].value, [], node.typ, node.location, node.pos, node.annotation, add_gas_estimate=node.add_gas_estimate)
         else:
             raise Exception("Clamp always fails")
     # Turns out this is actually not such a good optimization after all
@@ -115,11 +104,11 @@ def optimize(node):
                 o.extend(arg.args)
             elif arg.value != "pass":
                 o.append(arg)
-        return LLLnode(node.value, o, node.typ, node.location, node.pos, node.annotation)
+        return LLLnode(node.value, o, node.typ, node.location, node.pos, node.annotation, add_gas_estimate=node.add_gas_estimate)
     elif hasattr(node, 'total_gas'):
-        o = LLLnode(node.value, argz, node.typ, node.location, node.pos, node.annotation)
+        o = LLLnode(node.value, argz, node.typ, node.location, node.pos, node.annotation, add_gas_estimate=node.add_gas_estimate)
         o.total_gas = node.total_gas - node.gas + o.gas
         o.func_name = node.func_name
         return o
     else:
-        return LLLnode(node.value, argz, node.typ, node.location, node.pos, node.annotation)
+        return LLLnode(node.value, argz, node.typ, node.location, node.pos, node.annotation, add_gas_estimate=node.add_gas_estimate)
